@@ -17,9 +17,9 @@
 
 bl_info = {
     "name": "MeshLint: Like Spell-checking for your Meshes",
-    "author": "rking",
+    "author": "rking (Port to 2.80 Sav Martin)",
     "version": (1, 0),
-    "blender": (2, 6, 3),
+    "blender": (2, 80, 0),
     "location": "Object Data properties > MeshLint",
     "description": "Check objects for: Tris / Ngons / Nonmanifoldness / etc",
     "warning": "",
@@ -343,16 +343,17 @@ try:
 
         def execute(self, context):
             if MeshLintVitalizer.is_live:
-                bpy.app.handlers.scene_update_post.remove(global_repeated_check)
+                bpy.app.handlers.depsgraph_update_post.remove(global_repeated_check)
                 MeshLintVitalizer.is_live = False
             else:
-                bpy.app.handlers.scene_update_post.append(global_repeated_check)
+                bpy.app.handlers.depsgraph_update_post.append(global_repeated_check) #sav
                 MeshLintVitalizer.is_live = True
             return {'FINISHED'}
 
 
     def activate(obj):
-        bpy.context.scene.objects.active = obj
+        # bpy.context.scene.objects.active = obj #sav
+        bpy.context.view_layer.objects.active = obj
 
 
     class MeshLintObjectLooper:
@@ -381,7 +382,7 @@ try:
                     self.troubled_meshes.append(obj)
             priorities = [self.original_active] + self.troubled_meshes
             for obj in priorities:
-                if obj.select:
+                if obj.select_get:
                     activate(obj)
                     break
             self.handle_troubled_meshes()
@@ -436,7 +437,7 @@ try:
                 if not obj in self.troubled_meshes:
                     obj.select = False
 
-    class MeshLintControl(bpy.types.Panel):
+    class MESH_PT_MeshLintControl(bpy.types.Panel):
         bl_space_type = 'PROPERTIES'
         bl_region_type = 'WINDOW'
         bl_context = 'data'
@@ -493,14 +494,14 @@ try:
                     label = depluralize(count=count, string=label)
                     reward = 'ERROR'
                 col.row().label(text=label, icon=reward)
-            name_crits = MeshLintControl.build_object_criticisms(
+            name_crits = MESH_PT_MeshLintControl.build_object_criticisms(
                             bpy.context.selected_objects, total_problems)
             for crit in name_crits:
-                col.row().label(crit)
+                col.row().label(text=crit)
 
         def add_toggle_buttons(self, layout, context):
             col = layout.column()
-            col.row().label('Toggle:')
+            col.row().label(text='Toggle:')
             for lint in MeshLintAnalyzer.CHECKS:
                 prop_name = lint['check_prop']
                 is_enabled = getattr(context.scene, prop_name)
@@ -519,10 +520,10 @@ try:
                 criticisms.append('...%s "%s" %s.' % (
                     conjunction, obj.name, crit))
             for obj in objects:
-                if MeshLintControl.has_unapplied_scale(obj.scale):
+                if MESH_PT_MeshLintControl.has_unapplied_scale(obj.scale):
                     add_crit('has an unapplied scale')
                     already_complained = True
-                if MeshLintControl.is_bad_name(obj.name):
+                if MESH_PT_MeshLintControl.is_bad_name(obj.name):
                     add_crit('is not a great name')
                     already_complained = True
             return criticisms
@@ -580,20 +581,20 @@ try:
             def test_scale_application(self):
                 for bad in [ [0,0,0], [1,2,3], [1,1,1.1] ]:
                     self.assertEqual(
-                        True, MeshLintControl.has_unapplied_scale(bad),
+                        True, MESH_PT_MeshLintControl.has_unapplied_scale(bad),
                         "Unapplied scale: %s" % bad)
                 self.assertEqual(
-                    False, MeshLintControl.has_unapplied_scale([1,1,1]),
+                    False, MESH_PT_MeshLintControl.has_unapplied_scale([1,1,1]),
                     "Applied scale (1,1,1)")
 
             def test_bad_names(self):
                 for bad in [ 'Cube', 'Cube.001', 'Sphere.123' ]:
                     self.assertEqual(
-                        True, MeshLintControl.is_bad_name(bad),
+                        True, MESH_PT_MeshLintControl.is_bad_name(bad),
                         "Bad name: %s" % bad)
                 for ok in [ 'Whatever', 'NumbersOkToo.001' ]:
                     self.assertEqual(
-                        False, MeshLintControl.is_bad_name(ok),
+                        False, MESH_PT_MeshLintControl.is_bad_name(ok),
                         "OK name: %s" % ok)
 
 
@@ -700,7 +701,7 @@ try:
 
         class TestUI(unittest.TestCase):
             def test_complaints(self):
-                f = MeshLintControl.build_object_criticisms
+                f = MESH_PT_MeshLintControl.build_object_criticisms
                 self.assertEqual([], f([], 0), 'Nothing selected')
                 self.assertEqual(
                     [],
@@ -827,17 +828,41 @@ try:
             this condition.""")
 
 
+
+    classes = (
+        # QuietTestRunner,
+        # QuietOnSuccessTestResult,
+        # TestUI,MockBlenderObject,
+        # TestAnalysis,
+        # TestUtilities,
+        # TestControl,
+        MESH_PT_MeshLintControl,
+        MeshLintObjectDeselector,
+        MeshLintSelector,
+        # MeshLintObjectLooper,
+        MeshLintVitalizer,
+        # MeshLintContinuousChecker,
+        # MeshLintAnalyzer
+    )
+
+
     def register():
-        bpy.utils.register_module(__name__)
+        from bpy.utils import register_class
+        for cls in classes:
+            register_class(cls)
+        
+        
 
 
     def unregister():
-        bpy.utils.unregister_module(__name__)
+        from bpy.utils import unregister_class
+
+        for cls in classes:
+            unregister_class(cls)
 
 
-    if __name__ == '__main__':
+    if __name__ == "__main__":
         register()
-
 except:
     # OK, I totally don't get why this is necessary. But otherwise I am not
     # seeing error text. Causes the extra indent over all above code. =(
