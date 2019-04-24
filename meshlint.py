@@ -346,13 +346,12 @@ try:
                 bpy.app.handlers.depsgraph_update_post.remove(global_repeated_check)
                 MeshLintVitalizer.is_live = False
             else:
-                bpy.app.handlers.depsgraph_update_post.append(global_repeated_check) #sav
+                bpy.app.handlers.depsgraph_update_post.append(global_repeated_check) 
                 MeshLintVitalizer.is_live = True
             return {'FINISHED'}
 
 
     def activate(obj):
-        # bpy.context.scene.objects.active = obj #sav
         bpy.context.view_layer.objects.active = obj
 
 
@@ -830,19 +829,10 @@ try:
 
 
     classes = (
-        # QuietTestRunner,
-        # QuietOnSuccessTestResult,
-        # TestUI,MockBlenderObject,
-        # TestAnalysis,
-        # TestUtilities,
-        # TestControl,
         MESH_PT_MeshLintControl,
         MeshLintObjectDeselector,
         MeshLintSelector,
-        # MeshLintObjectLooper,
         MeshLintVitalizer,
-        # MeshLintContinuousChecker,
-        # MeshLintAnalyzer
     )
 
 
