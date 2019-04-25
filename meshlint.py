@@ -201,15 +201,27 @@ try:
                     print("MeshLint says: Huh?? → elemtype of %s." % elemtype)
         
         def select_vert(self, index):
+            ob = bpy.context.edit_object
+            me = ob.data
+            bm = bmesh.from_edit_mesh(me)            
+            bm.verts.ensure_lookup_table()
             self.b.verts[index].select = True
 
         def select_edge(self, index):
+            ob = bpy.context.edit_object
+            me = ob.data
+            bm = bmesh.from_edit_mesh(me)            
+            bm.edges.ensure_lookup_table()
             edge = self.b.edges[index]
             edge.select = True
             for each in edge.verts:
                 self.select_vert(each.index)
 
         def select_face(self, index):
+            ob = bpy.context.edit_object
+            me = ob.data
+            bm = bmesh.from_edit_mesh(me)            
+            bm.faces.ensure_lookup_table()
             face = self.b.faces[index]
             face.select = True
             for each in face.edges:
